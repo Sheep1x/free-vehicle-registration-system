@@ -6,8 +6,8 @@ import type {Plugin} from 'vite'
 import {UnifiedViteWeappTailwindcssPlugin as uvtw} from 'weapp-tailwindcss/vite'
 
 import devConfig from './dev'
-import prodConfig from './prod'
 import lintConfig from './lint'
+import prodConfig from './prod'
 
 const base = String(process.argv[process.argv.length - 1])
 const publicPath = /^http/.test(base) ? base : '/'
