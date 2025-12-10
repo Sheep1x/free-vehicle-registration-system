@@ -1,8 +1,8 @@
 import {Button, Image, Input, Picker, Text, View} from '@tarojs/components'
 import Taro, {useRouter} from '@tarojs/taro'
 import type React from 'react'
-import {useEffect, useState} from 'react'
-import {createTollRecord} from '@/db/api'
+import {useCallback, useEffect, useState} from 'react'
+import {createTollRecord, getAllCollectors, getAllMonitors, getCurrentShift, getShiftSettings} from '@/db/api'
 import {compressImage, imageToBase64} from '@/utils/imageUtils'
 import type {OCRResult} from '@/utils/ocrUtils'
 import {recognizeTollReceipt} from '@/utils/ocrUtils'
@@ -28,6 +28,41 @@ const Result: React.FC = () => {
 
   // 免费原因选择器索引
   const [freeReasonIndex, setFreeReasonIndex] = useState(0)
+
+  // 收费员和监控员列表
+  const [collectorsList, setCollectorsList] = useState<Array<{id: string; name: string; code: string}>>([])
+  const [monitorsList, setMonitorsList] = useState<Array<{id: string; name: string; code: string}>>([])
+  const [collectorIndex, setCollectorIndex] = useState(0)
+  const [monitorIndex, setMonitorIndex] = useState(0)
+
+  // 当前班次
+  const [currentShift, setCurrentShift] = useState('')
+
+  // 加载收费员和监控员列表
+  const loadStaffData = useCallback(async () => {
+    try {
+      const [collectors, monitors, shifts] = await Promise.all([
+        getAllCollectors(),
+        getAllMonitors(),
+        getShiftSettings()
+      ])
+
+      setCollectorsList(collectors)
+      setMonitorsList(monitors)
+
+      // 计算当前班次
+      if (shifts.length > 0) {
+        const shift = getCurrentShift(shifts)
+        setCurrentShift(shift)
+      }
+    } catch (error) {
+      console.error('加载人员数据失败:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadStaffData()
+  }, [loadStaffData])
 
   useEffect(() => {
     // 从路由参数获取识别结果
@@ -186,6 +221,34 @@ const Result: React.FC = () => {
     setFreeReason(FREE_REASONS[index])
   }
 
+  // 收费员选择
+  const handleCollectorChange = (e) => {
+    const index = e.detail.value
+    setCollectorIndex(index)
+    if (index > 0) {
+      setTollCollector(collectorsList[index - 1].name)
+    } else {
+      setTollCollector('')
+    }
+  }
+
+  // 监控员选择
+  const handleMonitorChange = (e) => {
+    const index = e.detail.value
+    setMonitorIndex(index)
+    if (index > 0) {
+      setMonitor(monitorsList[index - 1].name)
+    } else {
+      setMonitor('')
+    }
+  }
+
+  // 生成收费员选项
+  const collectorOptions = ['请选择收费员', ...collectorsList.map((c) => `${c.name} (${c.code})`)]
+
+  // 生成监控员选项
+  const monitorOptions = ['请选择监控员', ...monitorsList.map((m) => `${m.name} (${m.code})`)]
+
   return (
     <View className="min-h-screen bg-gradient-bg pb-6">
       {/* 自定义返回按钮 */}
@@ -240,28 +303,38 @@ const Result: React.FC = () => {
             {/* 收费员 */}
             <View>
               <Text className="text-sm text-muted-foreground mb-2 block">收费员</Text>
-              <View className="bg-input rounded-lg px-3 py-2">
-                <Input
-                  className="w-full text-foreground"
-                  value={tollCollector}
-                  onInput={(e) => setTollCollector(e.detail.value)}
-                  placeholder="请输入收费员姓名"
-                />
-              </View>
+              <Picker mode="selector" range={collectorOptions} value={collectorIndex} onChange={handleCollectorChange}>
+                <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
+                  <Text className={tollCollector ? 'text-foreground' : 'text-muted-foreground'}>
+                    {tollCollector || '请选择收费员'}
+                  </Text>
+                  <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
+                </View>
+              </Picker>
             </View>
 
             {/* 监控员 */}
             <View>
               <Text className="text-sm text-muted-foreground mb-2 block">监控员</Text>
-              <View className="bg-input rounded-lg px-3 py-2">
-                <Input
-                  className="w-full text-foreground"
-                  value={monitor}
-                  onInput={(e) => setMonitor(e.detail.value)}
-                  placeholder="请输入监控员姓名"
-                />
-              </View>
+              <Picker mode="selector" range={monitorOptions} value={monitorIndex} onChange={handleMonitorChange}>
+                <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
+                  <Text className={monitor ? 'text-foreground' : 'text-muted-foreground'}>
+                    {monitor || '请选择监控员'}
+                  </Text>
+                  <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
+                </View>
+              </Picker>
             </View>
+
+            {/* 当前班次显示 */}
+            {currentShift && (
+              <View>
+                <Text className="text-sm text-muted-foreground mb-2 block">当前班次</Text>
+                <View className="bg-input rounded-lg px-3 py-2">
+                  <Text className="text-foreground">{currentShift}</Text>
+                </View>
+              </View>
+            )}
 
             {/* 车型 */}
             <View>
