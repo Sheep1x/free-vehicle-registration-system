@@ -18,10 +18,21 @@ export interface OCRResult {
 function parseOCRResponse(content: string): OCRResult {
   const result: OCRResult = {}
 
-  // 提取车牌号
-  const plateMatch = content.match(/车牌[号]?[:：]?\s*([^\n，,。\s]+)/i)
+  // 提取车牌号（包含颜色和号码，例如：蓝 鲁P233CV）
+  // 匹配模式：车牌号：蓝 鲁P233CV 或 车牌：蓝鲁P233CV
+  const plateMatch = content.match(
+    /车牌[号]?[:：]?\s*([蓝黄绿白黑][\s]?[^\n，,。]+?)(?=\n|车型|轴|吨|入口|时间|金额|$)/i
+  )
   if (plateMatch) {
     result.plateNumber = plateMatch[1].trim()
+  } else {
+    // 备用匹配：直接查找颜色+车牌号模式
+    const altPlateMatch = content.match(
+      /([蓝黄绿白黑][\s]?[A-Z京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z0-9]{5,6})/i
+    )
+    if (altPlateMatch) {
+      result.plateNumber = altPlateMatch[1].trim()
+    }
   }
 
   // 提取车型
@@ -84,7 +95,8 @@ export async function recognizeTollReceipt(
       messages: [
         {
           role: 'system',
-          content: '你是一个专业的票据识别助手，擅长从车辆通行费票据图片中提取关键信息。'
+          content:
+            '你是一个专业的票据识别助手，擅长从车辆通行费票据图片中提取关键信息。请准确识别所有字段，特别注意车牌号要包含颜色和完整号码。'
         },
         {
           role: 'user',
@@ -92,22 +104,33 @@ export async function recognizeTollReceipt(
             {
               type: 'text',
               text: `请仔细识别这张车辆通行费票据图片，提取以下信息：
-1. 车牌号（例如：蓝 鲁P233CV）
-2. 车型（例如：一型 客车）
-3. 轴数（例如：2轴）
-4. 吨位（例如：1.26吨）
-5. 入口信息（包含站点和省份，例如：[1313-1A02] 内蒙高速-河北段1 河北清河站）
-6. 通行时间（例如：2025-12-06 13:25:05）
-7. 金额（例如：79.00元）
 
-请按照以下格式输出：
-车牌号：xxx
-车型：xxx
-轴数：xxx
-吨位：xxx
-入口：xxx
-时间：xxx
-金额：xxx元`
+1. 车牌号：必须包含车牌颜色和完整号码（例如：蓝 鲁P233CV，黄 京A12345）
+   - 车牌颜色：蓝/黄/绿/白/黑
+   - 车牌号码：完整的省份简称+字母+数字组合
+   
+2. 车型：车辆类型（例如：一型 客车，二型 货车）
+
+3. 轴数：车辆轴数（例如：2轴，3轴）
+
+4. 吨位：车辆吨位（例如：1.26吨，2.5吨）
+
+5. 入口信息：包含站点编号、路段名称、站点名称（例如：[1313-1A02] 内蒙高速-河北段1 河北清河站）
+
+6. 通行时间：完整的日期时间（例如：2025-12-06 13:25:05）
+
+7. 金额：通行费金额（例如：79.00元）
+
+请严格按照以下格式输出，每个字段单独一行：
+车牌号：[颜色] [完整车牌号]
+车型：[车型信息]
+轴数：[轴数]
+吨位：[吨位]
+入口：[入口信息]
+时间：[通行时间]
+金额：[金额]元
+
+注意：车牌号必须完整，包含颜色和号码，中间用空格分隔。`
             },
             {
               type: 'image_url',

@@ -115,13 +115,13 @@ const Result: React.FC = () => {
           <View className="space-y-4">
             {/* 车牌号 */}
             <View>
-              <Text className="text-sm text-muted-foreground mb-2 block">车牌号</Text>
+              <Text className="text-sm text-muted-foreground mb-2 block">车牌号（含颜色）</Text>
               <View className="bg-input rounded-lg px-3 py-2">
                 <Input
                   className="w-full text-foreground"
                   value={plateNumber}
                   onInput={(e) => setPlateNumber(e.detail.value)}
-                  placeholder="请输入车牌号"
+                  placeholder="如：蓝 鲁P233CV"
                 />
               </View>
             </View>
