@@ -286,55 +286,6 @@ const Result: React.FC = () => {
               </View>
             </View>
 
-            {/* 免费原因 */}
-            <View>
-              <Text className="text-sm text-muted-foreground mb-2 block">免费原因</Text>
-              <Picker mode="selector" range={FREE_REASONS} value={freeReasonIndex} onChange={handleFreeReasonChange}>
-                <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
-                  <Text className={freeReason ? 'text-foreground' : 'text-muted-foreground'}>
-                    {freeReason || '请选择免费原因'}
-                  </Text>
-                  <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
-                </View>
-              </Picker>
-            </View>
-
-            {/* 收费员 */}
-            <View>
-              <Text className="text-sm text-muted-foreground mb-2 block">收费员</Text>
-              <Picker mode="selector" range={collectorOptions} value={collectorIndex} onChange={handleCollectorChange}>
-                <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
-                  <Text className={tollCollector ? 'text-foreground' : 'text-muted-foreground'}>
-                    {tollCollector || '请选择收费员'}
-                  </Text>
-                  <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
-                </View>
-              </Picker>
-            </View>
-
-            {/* 监控员 */}
-            <View>
-              <Text className="text-sm text-muted-foreground mb-2 block">监控员</Text>
-              <Picker mode="selector" range={monitorOptions} value={monitorIndex} onChange={handleMonitorChange}>
-                <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
-                  <Text className={monitor ? 'text-foreground' : 'text-muted-foreground'}>
-                    {monitor || '请选择监控员'}
-                  </Text>
-                  <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
-                </View>
-              </Picker>
-            </View>
-
-            {/* 当前班次显示 */}
-            {currentShift && (
-              <View>
-                <Text className="text-sm text-muted-foreground mb-2 block">当前班次</Text>
-                <View className="bg-input rounded-lg px-3 py-2">
-                  <Text className="text-foreground">{currentShift}</Text>
-                </View>
-              </View>
-            )}
-
             {/* 车型 */}
             <View>
               <Text className="text-sm text-muted-foreground mb-2 block">车型</Text>
@@ -411,6 +362,57 @@ const Result: React.FC = () => {
                   onInput={(e) => setAmount(e.detail.value)}
                   placeholder="请输入金额"
                 />
+              </View>
+            </View>
+
+            {/* 收费员和监控员（并排） */}
+            <View className="flex gap-3">
+              <View className="flex-1">
+                <Text className="text-sm text-muted-foreground mb-2 block">收费员</Text>
+                <Picker
+                  mode="selector"
+                  range={collectorOptions}
+                  value={collectorIndex}
+                  onChange={handleCollectorChange}>
+                  <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
+                    <Text className={tollCollector ? 'text-foreground text-sm' : 'text-muted-foreground text-sm'}>
+                      {tollCollector || '请选择'}
+                    </Text>
+                    <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
+                  </View>
+                </Picker>
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm text-muted-foreground mb-2 block">监控员</Text>
+                <Picker mode="selector" range={monitorOptions} value={monitorIndex} onChange={handleMonitorChange}>
+                  <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
+                    <Text className={monitor ? 'text-foreground text-sm' : 'text-muted-foreground text-sm'}>
+                      {monitor || '请选择'}
+                    </Text>
+                    <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
+                  </View>
+                </Picker>
+              </View>
+            </View>
+
+            {/* 当前班次和免费原因（并排） */}
+            <View className="flex gap-3">
+              <View className="flex-1">
+                <Text className="text-sm text-muted-foreground mb-2 block">当前班次</Text>
+                <View className="bg-input rounded-lg px-3 py-2">
+                  <Text className="text-foreground text-sm">{currentShift || '未设置'}</Text>
+                </View>
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm text-muted-foreground mb-2 block">免费原因</Text>
+                <Picker mode="selector" range={FREE_REASONS} value={freeReasonIndex} onChange={handleFreeReasonChange}>
+                  <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
+                    <Text className={freeReason ? 'text-foreground text-sm' : 'text-muted-foreground text-sm'}>
+                      {freeReason || '请选择'}
+                    </Text>
+                    <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
+                  </View>
+                </Picker>
               </View>
             </View>
           </View>
