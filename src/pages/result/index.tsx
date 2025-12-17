@@ -8,7 +8,7 @@ import type {OCRResult} from '@/utils/ocrUtils'
 import {recognizeTollReceipt} from '@/utils/ocrUtils'
 
 // 免费原因选项
-const FREE_REASONS = ['紧急车', '军警车', '应急车', '旅游包车']
+const FREE_REASONS = ['应急车', '军警车', '旅游包车', '紧急车']
 
 const Result: React.FC = () => {
   const router = useRouter()
@@ -34,6 +34,14 @@ const Result: React.FC = () => {
   const [monitorsList, setMonitorsList] = useState<Array<{id: string; name: string; code: string}>>([])
   const [collectorIndex, setCollectorIndex] = useState(0)
   const [monitorIndex, setMonitorIndex] = useState(0)
+  // 搜索功能相关状态
+  const [collectorSearch, setCollectorSearch] = useState('')
+  const [monitorSearch, setMonitorSearch] = useState('')
+  const [showCollectorOptions, setShowCollectorOptions] = useState(false)
+  const [showMonitorOptions, setShowMonitorOptions] = useState(false)
+  // 过滤后的列表
+  const [filteredCollectors, setFilteredCollectors] = useState<Array<{id: string; name: string; code: string}>>([])
+  const [filteredMonitors, setFilteredMonitors] = useState<Array<{id: string; name: string; code: string}>>([])
 
   // 当前班次
   const [currentShift, setCurrentShift] = useState('')
@@ -64,6 +72,27 @@ const Result: React.FC = () => {
     loadStaffData()
   }, [loadStaffData])
 
+  // 处理入口信息，移除括号及其中内容
+  const processEntryInfo = (entryInfo: string) => {
+    if (!entryInfo) return '';
+    // 移除括号及其中的内容
+    return entryInfo.replace(/\([^)]*\)/g, '').trim();
+  }
+
+  // 格式化时间，移除ISO格式的T和时区信息
+  const formatEntryTime = (time: string) => {
+    if (!time) return '';
+    // 处理ISO格式时间字符串，去掉时区信息
+    if (time.includes('+00:00')) {
+      time = time.replace('+00:00', '');
+    }
+    // 处理T分隔符
+    if (time.includes('T')) {
+      time = time.replace('T', ' ');
+    }
+    return time;
+  }
+
   useEffect(() => {
     // 从路由参数获取识别结果
     const {data} = router.params
@@ -75,12 +104,18 @@ const Result: React.FC = () => {
         setVehicleType(result.vehicleType || '')
         setAxleCount(result.axleCount || '')
         setTonnage(result.tonnage || '')
-        setEntryInfo(result.entryInfo || '')
-        setEntryTime(result.entryTime || '')
+        setEntryInfo(processEntryInfo(result.entryInfo || ''))
+        setEntryTime(formatEntryTime(result.entryTime || ''))
         setAmount(result.amount?.toString() || '')
         setFreeReason(result.freeReason || '')
-        setTollCollector(result.tollCollector || '')
-        setMonitor(result.monitor || '')
+        // 设置收费员信息，确保收费员搜索框和显示值一致
+        const collectorValue = result.tollCollector || ''
+        setTollCollector(collectorValue)
+        setCollectorSearch(collectorValue)
+        // 设置监控员信息，确保监控员搜索框和显示值一致
+        const monitorValue = result.monitor || ''
+        setMonitor(monitorValue)
+        setMonitorSearch(monitorValue)
       } catch (error) {
         console.error('解析识别结果失败:', error)
       }
@@ -119,8 +154,8 @@ const Result: React.FC = () => {
       setVehicleType(result.vehicleType || '')
       setAxleCount(result.axleCount || '')
       setTonnage(result.tonnage || '')
-      setEntryInfo(result.entryInfo || '')
-      setEntryTime(result.entryTime || '')
+      setEntryInfo(processEntryInfo(result.entryInfo || ''))
+      setEntryTime(formatEntryTime(result.entryTime || ''))
       setAmount(result.amount?.toString() || '')
 
       Taro.showToast({
@@ -162,6 +197,17 @@ const Result: React.FC = () => {
       title: '保存中...'
     })
 
+    // 获取当前时间作为登记时间，使用本地时间格式
+    const now = new Date();
+    // 格式化为YYYY-MM-DD HH:MM:SS格式的本地时间
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const currentTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+
     try {
       const record = await createTollRecord({
         plate_number: plateNumber,
@@ -169,7 +215,7 @@ const Result: React.FC = () => {
         axle_count: axleCount,
         tonnage: tonnage,
         entry_info: entryInfo,
-        entry_time: entryTime,
+        entry_time: currentTime, // 使用当前时间作为登记时间
         amount: amount ? Number.parseFloat(amount) : undefined,
         image_url: imageUrl,
         free_reason: freeReason,
@@ -221,38 +267,65 @@ const Result: React.FC = () => {
     setFreeReason(FREE_REASONS[index])
   }
 
-  // 收费员选择
-  const handleCollectorChange = (e) => {
-    const index = e.detail.value
-    setCollectorIndex(index)
-    if (index > 0) {
-      setTollCollector(collectorsList[index - 1].name)
+  // 过滤收费员列表
+  useEffect(() => {
+    if (collectorSearch.trim() === '') {
+      setFilteredCollectors(collectorsList)
     } else {
-      setTollCollector('')
+      const searchTerm = collectorSearch.toLowerCase()
+      setFilteredCollectors(collectorsList.filter(item => 
+        item.name.toLowerCase().includes(searchTerm) || 
+        item.code.toLowerCase().includes(searchTerm)
+      ))
     }
+  }, [collectorSearch, collectorsList])
+
+  // 过滤监控员列表
+  useEffect(() => {
+    if (monitorSearch.trim() === '') {
+      setFilteredMonitors(monitorsList)
+    } else {
+      const searchTerm = monitorSearch.toLowerCase()
+      setFilteredMonitors(monitorsList.filter(item => 
+        item.name.toLowerCase().includes(searchTerm) || 
+        item.code.toLowerCase().includes(searchTerm)
+      ))
+    }
+  }, [monitorSearch, monitorsList])
+
+  // 收费员选择
+  const handleCollectorSelect = (collector) => {
+    const fullName = `${collector.code} ${collector.name}`
+    setTollCollector(fullName)
+    setCollectorSearch(fullName)
+    setShowCollectorOptions(false)
   }
 
   // 监控员选择
-  const handleMonitorChange = (e) => {
-    const index = e.detail.value
-    setMonitorIndex(index)
-    if (index > 0) {
-      setMonitor(monitorsList[index - 1].name)
-    } else {
-      setMonitor('')
-    }
+  const handleMonitorSelect = (monitor) => {
+    const fullName = `${monitor.code} ${monitor.name}`
+    setMonitor(fullName)
+    setMonitorSearch(fullName)
+    setShowMonitorOptions(false)
   }
 
-  // 生成收费员选项
-  const collectorOptions = ['请选择收费员', ...collectorsList.map((c) => `${c.name} (${c.code})`)]
+  // 点击外部关闭下拉选项
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowCollectorOptions(false)
+      setShowMonitorOptions(false)
+    }
 
-  // 生成监控员选项
-  const monitorOptions = ['请选择监控员', ...monitorsList.map((m) => `${m.name} (${m.code})`)]
+    document.addEventListener('click', handleClickOutside)
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+    }
+  }, [])
 
   return (
     <View className="min-h-screen bg-gradient-bg pb-6">
       {/* 自定义返回按钮 */}
-      <View className="fixed top-0 left-0 z-50 px-4 py-3" onClick={handleBack}>
+      <View className="fixed top-10 left-0 z-50 px-4 py-3" onClick={handleBack}>
         <View className="flex items-center bg-primary rounded-full w-10 h-10 justify-center shadow-lg">
           <View className="i-mdi-chevron-left text-3xl text-primary-foreground" />
         </View>
@@ -338,9 +411,9 @@ const Result: React.FC = () => {
               </View>
             </View>
 
-            {/* 通行时间 */}
+            {/* 登记时间 */}
             <View>
-              <Text className="text-sm text-muted-foreground mb-2 block">通行时间</Text>
+              <Text className="text-sm text-muted-foreground mb-2 block">登记时间</Text>
               <View className="bg-input rounded-lg px-3 py-2">
                 <Input
                   className="w-full text-foreground"
@@ -367,31 +440,100 @@ const Result: React.FC = () => {
 
             {/* 收费员和监控员（并排） */}
             <View className="flex gap-3">
-              <View className="flex-1">
+              {/* 收费员 */}
+              <View className="flex-1 relative">
                 <Text className="text-sm text-muted-foreground mb-2 block">收费员</Text>
-                <Picker
-                  mode="selector"
-                  range={collectorOptions}
-                  value={collectorIndex}
-                  onChange={handleCollectorChange}>
-                  <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
-                    <Text className={tollCollector ? 'text-foreground text-sm' : 'text-muted-foreground text-sm'}>
-                      {tollCollector || '请选择'}
-                    </Text>
+                <View className="relative">
+                  <View 
+                    className="bg-input rounded-lg px-3 py-2 flex items-center justify-between cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCollectorOptions(!showCollectorOptions);
+                      setShowMonitorOptions(false);
+                    }}
+                  >
+                    <Input
+                      className="w-full text-foreground text-sm"
+                      value={collectorSearch}
+                      onInput={(e) => {
+                        setCollectorSearch(e.detail.value);
+                        setShowCollectorOptions(true);
+                      }}
+                      placeholder="请输入或选择收费员"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCollectorOptions(true);
+                        setShowMonitorOptions(false);
+                      }}
+                    />
                     <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
                   </View>
-                </Picker>
+                  {/* 下拉选项 */}
+                  {showCollectorOptions && filteredCollectors.length > 0 && (
+                    <View 
+                      className="absolute top-full left-0 right-0 bg-input rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto z-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {filteredCollectors.map((collector, index) => (
+                        <View 
+                          key={collector.id}
+                          className="px-3 py-2 hover:bg-secondary cursor-pointer text-sm"
+                          onClick={() => handleCollectorSelect(collector)}
+                        >
+                          <Text className="text-foreground">{collector.code} {collector.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
               </View>
-              <View className="flex-1">
+              
+              {/* 监控员 */}
+              <View className="flex-1 relative">
                 <Text className="text-sm text-muted-foreground mb-2 block">监控员</Text>
-                <Picker mode="selector" range={monitorOptions} value={monitorIndex} onChange={handleMonitorChange}>
-                  <View className="bg-input rounded-lg px-3 py-2 flex items-center justify-between">
-                    <Text className={monitor ? 'text-foreground text-sm' : 'text-muted-foreground text-sm'}>
-                      {monitor || '请选择'}
-                    </Text>
+                <View className="relative">
+                  <View 
+                    className="bg-input rounded-lg px-3 py-2 flex items-center justify-between cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMonitorOptions(!showMonitorOptions);
+                      setShowCollectorOptions(false);
+                    }}
+                  >
+                    <Input
+                      className="w-full text-foreground text-sm"
+                      value={monitorSearch}
+                      onInput={(e) => {
+                        setMonitorSearch(e.detail.value);
+                        setShowMonitorOptions(true);
+                      }}
+                      placeholder="请输入或选择监控员"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMonitorOptions(true);
+                        setShowCollectorOptions(false);
+                      }}
+                    />
                     <View className="i-mdi-chevron-down text-lg text-muted-foreground" />
                   </View>
-                </Picker>
+                  {/* 下拉选项 */}
+                  {showMonitorOptions && filteredMonitors.length > 0 && (
+                    <View 
+                      className="absolute top-full left-0 right-0 bg-input rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto z-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {filteredMonitors.map((monitor, index) => (
+                        <View 
+                          key={monitor.id}
+                          className="px-3 py-2 hover:bg-secondary cursor-pointer text-sm"
+                          onClick={() => handleMonitorSelect(monitor)}
+                        >
+                          <Text className="text-foreground">{monitor.code} {monitor.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
 

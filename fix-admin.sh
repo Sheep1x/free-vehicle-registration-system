@@ -5,8 +5,12 @@ echo ""
 
 # 1. 重新配置
 echo "1️⃣ 重新配置Supabase连接..."
-cd /workspace/app-84zvdc9gufwh
-./scripts/setup-admin.sh
+cd /d/app-84zvdc9gufwh
+if [ -f "./scripts/setup-admin.sh" ]; then
+    bash ./scripts/setup-admin.sh
+else
+    echo "   未找到setup-admin.sh，跳过配置步骤"
+fi
 echo ""
 
 # 2. 清除浏览器缓存提示
@@ -20,7 +24,7 @@ echo ""
 echo "3️⃣ 启动本地服务器..."
 echo ""
 echo "✅ 服务器将启动在 http://localhost:8080"
-echo "📊 诊断页面: http://localhost:8080/test-connection.html"
+echo "📊 诊断页面: http://localhost:8080/clear-cache.html"
 echo "🎛️ 管理页面: http://localhost:8080/index.html"
 echo ""
 echo "按 Ctrl+C 停止服务器"
@@ -28,4 +32,4 @@ echo "=========================================="
 echo ""
 
 cd admin
-python3 -m http.server 8080
+python -m http.server 8080

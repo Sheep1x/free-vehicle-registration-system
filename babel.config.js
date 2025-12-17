@@ -10,5 +10,8 @@ module.exports = {
       }
     ]
   ],
-  plugins: []
+  plugins: [],
+  parserOpts: {
+    plugins: ['jsx', 'typescript']
+  }
 }

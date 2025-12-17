@@ -7,7 +7,7 @@ const Profile: React.FC = () => {
   const handleExport = () => {
     Taro.showModal({
       title: '导出功能',
-      content: '导出为Excel或PDF功能即将上线，敬请期待！',
+      content: '导出为Excel功能请在后台管理操作！',
       showCancel: false
     })
   }
@@ -16,8 +16,7 @@ const Profile: React.FC = () => {
   const handleAbout = () => {
     Taro.showModal({
       title: '关于免费车登记',
-      content:
-        '免费车登记是一款专业的免费车辆登记管理小程序，通过AI技术自动提取车辆信息，提高登记效率。\n\n版本：v1.0.0',
+      content: '通过调用AI大模型自动提取车辆信息\n提高登记效率\n响应无纸化办公。\n其实是不想手写\n \n \n开发: 杨一旭\n版本：v2.0.6',
       showCancel: false
     })
   }
@@ -36,7 +35,7 @@ const Profile: React.FC = () => {
     {
       icon: 'i-mdi-file-export',
       title: '导出记录',
-      desc: '导出为Excel或PDF',
+      desc: '导出为Excel',
       onClick: handleExport
     },
     {
@@ -114,7 +113,7 @@ const Profile: React.FC = () => {
         {/* 版权信息 */}
         <View className="mt-8 text-center">
           <Text className="text-xs text-muted-foreground block">© 2025 免费车登记</Text>
-          <Text className="text-xs text-muted-foreground block mt-1">专业的免费车辆登记管理工具</Text>
+          <Text className="text-xs text-muted-foreground block mt-1">杨一旭：“真的比手写快多了！”</Text>
         </View>
       </View>
     </View>

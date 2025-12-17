@@ -126,11 +126,63 @@ const History: React.FC = () => {
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return '-'
     try {
-      const date = new Date(timeStr)
+      // 检查是否是已经格式化好的本地时间字符串（包含空格分隔符）
+      if (timeStr.includes(' ')) {
+        // 已经是YYYY-MM-DD HH:MM:SS格式，只保留到分钟
+        const parts = timeStr.split(':')
+        if (parts.length >= 2) {
+          // 提取日期部分和小时分钟部分
+          const datePart = timeStr.split(' ')[0]
+          const timePart = `${parts[0]}:${parts[1]}`
+          return `${datePart} ${timePart}`
+        }
+        return timeStr
+      }
+      
+      // 处理不同格式的时间字符串
+      let date: Date
+      // 确保timeStr是字符串类型
+      let timeStrToUse: string
+      if (typeof timeStr === 'string') {
+        timeStrToUse = timeStr
+      } else {
+        // 对于非字符串类型，尝试转换为字符串
+        timeStrToUse = String(timeStr)
+      }
+      
+      // 处理ISO格式时间字符串，去掉时区信息
+      if (timeStrToUse.includes('+00:00')) {
+        timeStrToUse = timeStrToUse.replace('+00:00', '')
+      }
+      // 处理T分隔符
+      if (timeStrToUse.includes('T')) {
+        timeStrToUse = timeStrToUse.replace('T', ' ')
+      }
+      // 只保留到分钟
+      if (timeStrToUse.includes(':')) {
+        const parts = timeStrToUse.split(':')
+        timeStrToUse = `${parts[0]}:${parts[1]}`
+      }
+      
+      date = new Date(timeStrToUse)
+      
+      // 确保时间有效
+      if (isNaN(date.getTime())) {
+        return timeStr
+      }
+      // 返回格式化时间：YYYY-MM-DD HH:MM
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-    } catch {
+    } catch (error) {
+      console.error('格式化时间失败:', error)
       return timeStr
     }
+  }
+
+  // 处理入口信息，移除括号及其中内容
+  const processEntryInfo = (entryInfo: string | null) => {
+    if (!entryInfo) return '';
+    // 移除括号及其中的内容
+    return entryInfo.replace(/\([^)]*\)/g, '').trim();
   }
 
   return (
@@ -245,7 +297,7 @@ const History: React.FC = () => {
                           {record.entry_info && (
                             <View className="flex items-center">
                               <View className="i-mdi-map-marker text-sm text-muted-foreground mr-1" />
-                              <Text className="text-sm text-muted-foreground line-clamp-1">{record.entry_info}</Text>
+                              <Text className="text-sm text-muted-foreground line-clamp-1">{processEntryInfo(record.entry_info)}</Text>
                             </View>
                           )}
 
@@ -260,10 +312,11 @@ const History: React.FC = () => {
                             </View>
                           )}
 
+                          {/* 登记时间 */}
                           <View className="flex items-center">
                             <View className="i-mdi-clock-outline text-sm text-muted-foreground mr-1" />
                             <Text className="text-sm text-muted-foreground">
-                              {formatTime(record.entry_time || record.created_at)}
+                              登记时间: {formatTime(record.entry_time || record.created_at)}
                             </Text>
                           </View>
                         </View>

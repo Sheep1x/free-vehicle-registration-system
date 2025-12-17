@@ -1,144 +1,203 @@
-import {supabase} from '@/client/supabase'
-import type {CreateTollRecordInput, TollRecord} from './types'
+// 导入真实的 Supabase 客户端
+import { supabase } from '@/client/supabase';
 
-// 创建识别记录
-export async function createTollRecord(input: CreateTollRecordInput): Promise<TollRecord | null> {
-  const {data, error} = await supabase.from('toll_records').insert([input]).select().maybeSingle()
-
-  if (error) {
-    console.error('创建识别记录失败:', error)
-    return null
-  }
-
-  return data
+// 收费员类型
+export interface Collector {
+  id: string;
+  name: string;
+  code: string;
 }
 
-// 获取所有识别记录（按创建时间倒序）
-export async function getAllTollRecords(): Promise<TollRecord[]> {
-  const {data, error} = await supabase.from('toll_records').select('*').order('created_at', {ascending: false})
-
-  if (error) {
-    console.error('获取识别记录失败:', error)
-    return []
-  }
-
-  return data || []
+// 监控员类型
+export interface Monitor {
+  id: string;
+  name: string;
+  code: string;
 }
 
-// 根据车牌号筛选记录
-export async function getTollRecordsByPlateNumber(plateNumber: string): Promise<TollRecord[]> {
-  const {data, error} = await supabase
-    .from('toll_records')
-    .select('*')
-    .ilike('plate_number', `%${plateNumber}%`)
-    .order('created_at', {ascending: false})
-
-  if (error) {
-    console.error('筛选识别记录失败:', error)
-    return []
-  }
-
-  return data || []
+// 班次设置类型
+export interface ShiftSetting {
+  id: string;
+  start_time: string;
+  end_time: string;
+  name: string;
 }
 
-// 删除单条记录
-export async function deleteTollRecord(id: string): Promise<boolean> {
-  const {error} = await supabase.from('toll_records').delete().eq('id', id)
-
-  if (error) {
-    console.error('删除识别记录失败:', error)
-    return false
-  }
-
-  return true
+// 收费记录类型
+export interface TollRecord {
+  id: string;
+  plate_number: string;
+  vehicle_type: string;
+  axle_count: string;
+  tonnage: string;
+  entry_info: string;
+  entry_time: string;
+  amount: number | undefined;
+  image_url: string;
+  free_reason: string;
+  toll_collector: string;
+  monitor: string;
+  created_at: string;
 }
 
-// 批量删除记录
-export async function deleteTollRecords(ids: string[]): Promise<boolean> {
-  const {error} = await supabase.from('toll_records').delete().in('id', ids)
-
-  if (error) {
-    console.error('批量删除识别记录失败:', error)
-    return false
+// 获取所有收费员
+export async function getAllCollectors(): Promise<Collector[]> {
+  try {
+    const { data, error } = await supabase
+      .from('toll_collectors_info')
+      .select('id, name, code')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('获取收费员失败:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('获取收费员异常:', error);
+    return [];
   }
-
-  return true
 }
 
-// 根据ID获取单条记录
-export async function getTollRecordById(id: string): Promise<TollRecord | null> {
-  const {data, error} = await supabase.from('toll_records').select('*').eq('id', id)
-
-  if (error) {
-    console.error('获取识别记录详情失败:', error)
-    return null
+// 获取所有监控员
+export async function getAllMonitors(): Promise<Monitor[]> {
+  try {
+    const { data, error } = await supabase
+      .from('monitors_info')
+      .select('id, name, code')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('获取监控员失败:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('获取监控员异常:', error);
+    return [];
   }
-
-  return data && data.length > 0 ? data[0] : null
-}
-
-// ==================== 后台管理相关API ====================
-
-// 获取所有收费员列表
-export async function getAllCollectors(): Promise<Array<{id: string; name: string; code: string}>> {
-  const {data, error} = await supabase
-    .from('toll_collectors_info')
-    .select('id, name, code')
-    .order('name', {ascending: true})
-
-  if (error) {
-    console.error('获取收费员列表失败:', error)
-    return []
-  }
-
-  return data || []
-}
-
-// 获取所有监控员列表
-export async function getAllMonitors(): Promise<Array<{id: string; name: string; code: string}>> {
-  const {data, error} = await supabase.from('monitors_info').select('id, name, code').order('name', {ascending: true})
-
-  if (error) {
-    console.error('获取监控员列表失败:', error)
-    return []
-  }
-
-  return data || []
 }
 
 // 获取班次设置
-export async function getShiftSettings(): Promise<
-  Array<{id: string; shift_name: string; start_time: string; end_time: string}>
-> {
-  const {data, error} = await supabase.from('shift_settings').select('*').order('shift_name', {ascending: true})
-
-  if (error) {
-    console.error('获取班次设置失败:', error)
-    return []
+export async function getShiftSettings(): Promise<ShiftSetting[]> {
+  try {
+    const { data, error } = await supabase
+      .from('shift_settings')
+      .select('id, start_time, end_time, shift_name')
+      .order('shift_name');
+    
+    if (error) {
+      console.error('获取班次设置失败:', error);
+      return [];
+    }
+    
+    // 将shift_name映射为name，确保接口一致性
+    return (data || []).map(shift => ({
+      id: shift.id,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      name: shift.shift_name || ''
+    }));
+  } catch (error) {
+    console.error('获取班次设置异常:', error);
+    return [];
   }
-
-  return data || []
 }
 
-// 根据当前时间判断班次
-export function getCurrentShift(shifts: Array<{shift_name: string; start_time: string; end_time: string}>): string {
-  const now = new Date()
-  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`
+// 获取当前班次
+export function getCurrentShift(shifts: ShiftSetting[]): string {
+  // 获取当前时间
+  const now = new Date();
+  const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  
+  // 查找当前时间所属的班次
+  const currentShift = shifts.find(shift => {
+    return currentTime >= shift.start_time && currentTime < shift.end_time;
+  });
+  
+  return currentShift ? currentShift.name : '未设置';
+}
 
-  for (const shift of shifts) {
-    const {shift_name, start_time, end_time} = shift
-
-    // 处理跨天的情况（如夜班23:30-7:30）
-    if (start_time > end_time) {
-      if (currentTime >= start_time || currentTime < end_time) {
-        return shift_name
-      }
-    } else {
-      if (currentTime >= start_time && currentTime < end_time) {
-        return shift_name
-      }
+// 创建收费记录
+export async function createTollRecord(record: Omit<TollRecord, 'id' | 'created_at'>): Promise<TollRecord | null> {
+  try {
+    const { data, error } = await supabase
+      .from('toll_records')
+      .insert([record])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('创建收费记录失败:', error);
+      return null;
     }
+    
+    return data as TollRecord;
+  } catch (error) {
+    console.error('创建收费记录异常:', error);
+    return null;
   }
+}
 
-  return '未知班次'
+// 获取所有收费记录
+export async function getAllTollRecords(): Promise<TollRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from('toll_records')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('获取收费记录失败:', error);
+      return [];
+    }
+    
+    return data as TollRecord[];
+  } catch (error) {
+    console.error('获取收费记录异常:', error);
+    return [];
+  }
+}
+
+// 根据车牌号获取收费记录
+export async function getTollRecordsByPlateNumber(plateNumber: string): Promise<TollRecord[]> {
+  try {
+    const { data, error } = await supabase
+      .from('toll_records')
+      .select('*')
+      .ilike('plate_number', `%${plateNumber}%`)
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('根据车牌号获取收费记录失败:', error);
+      return [];
+    }
+    
+    return data as TollRecord[];
+  } catch (error) {
+    console.error('根据车牌号获取收费记录异常:', error);
+    return [];
+  }
+}
+
+// 删除收费记录
+export async function deleteTollRecords(ids: string[]): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('toll_records')
+      .delete()
+      .in('id', ids);
+    
+    if (error) {
+      console.error('删除收费记录失败:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('删除收费记录异常:', error);
+    return false;
+  }
 }

@@ -23,7 +23,12 @@ const Home: React.FC = () => {
         const imagePath = res.tempFilePaths[0]
         setSelectedImage(imagePath)
       }
-    } catch (error) {
+    } catch (error: any) {
+      // 当用户取消操作时，不显示失败提示
+      if (error.errMsg === 'chooseImage:fail cancel') {
+        console.log('用户取消了图片选择');
+        return;
+      }
       console.error('选择图片失败:', error)
       Taro.showToast({
         title: '选择图片失败',
@@ -32,21 +37,25 @@ const Home: React.FC = () => {
     }
   }
 
-  // 拍照（使用 chooseMedia API 确保唤醒相机）
+  // 拍照（使用 chooseImage API 直接调用相机）
   const handleTakePhoto = async () => {
     try {
-      const res = await Taro.chooseMedia({
+      const res = await Taro.chooseImage({
         count: 1,
-        mediaType: ['image'],
-        sourceType: ['camera'],
-        sizeType: ['compressed']
+        sizeType: ['compressed'],
+        sourceType: ['camera']
       })
 
-      if (res.tempFiles && res.tempFiles.length > 0) {
-        const imagePath = res.tempFiles[0].tempFilePath
+      if (res.tempFilePaths && res.tempFilePaths.length > 0) {
+        const imagePath = res.tempFilePaths[0]
         setSelectedImage(imagePath)
       }
-    } catch (error) {
+    } catch (error: any) {
+      // 当用户取消操作时，不显示失败提示
+      if (error.errMsg === 'chooseImage:fail cancel') {
+        console.log('用户取消了拍照');
+        return;
+      }
       console.error('拍照失败:', error)
       Taro.showToast({
         title: '拍照失败',
@@ -133,10 +142,10 @@ const Home: React.FC = () => {
         </View>
 
         {/* 操作按钮 */}
-        <View className="space-y-3">
+        <View>
           {/* 拍照按钮 */}
           <Button
-            className="w-full bg-primary text-primary-foreground py-4 rounded-xl break-keep text-base font-medium"
+            className="w-full bg-primary text-primary-foreground py-4 rounded-xl break-keep text-base font-medium mb-4"
             size="default"
             onClick={handleTakePhoto}
             disabled={isRecognizing}>
@@ -148,7 +157,7 @@ const Home: React.FC = () => {
 
           {/* 选择图片按钮 */}
           <Button
-            className="w-full text-secondary-foreground py-4 rounded-xl break-keep text-base font-medium bg-[#1492ff] bg-none"
+            className="w-full bg-primary text-primary-foreground py-4 rounded-xl break-keep text-base font-medium mb-4"
             size="default"
             onClick={handleChooseImage}
             disabled={isRecognizing}>
